@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/datadog/orchestrion/instrument"
-	"github.com/datadog/orchestrion/instrument/event"
+	"github.com/jonbodner/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument/event"
 )
 
 func main() {

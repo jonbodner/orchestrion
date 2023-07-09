@@ -12,8 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/datadog/orchestrion/internal/config"
-	"github.com/datadog/orchestrion/internal/instrument"
+	"github.com/jonbodner/orchestrion/internal/config"
+	"github.com/jonbodner/orchestrion/internal/instrument"
 )
 
 func main() {

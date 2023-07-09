@@ -9,7 +9,7 @@ Automatic instrumentation of Go code
 1. Install Orchestrion
 
 ```sh
-go install github.com/datadog/orchestrion
+go install github.com/jonbodner/orchestrion
 ```
 
 2. Let Orchestrion scan the codebase and rewrite it
@@ -18,7 +18,7 @@ go install github.com/datadog/orchestrion
 orchestrion -w ./
 ```
 
-3. Check-in the modified code! You might need to run `go get github.com/datadog/orchestrion` and `go mod tidy` if it's the first time you add `orchestrion` to your Go project.
+3. Check-in the modified code! You might need to run `go get github.com/jonbodner/orchestrion` and `go mod tidy` if it's the first time you add `orchestrion` to your Go project.
 
 ## What it does
 

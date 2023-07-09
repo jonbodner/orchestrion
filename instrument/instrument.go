@@ -13,7 +13,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 
-	"github.com/datadog/orchestrion/instrument/event"
+	"github.com/jonbodner/orchestrion/instrument/event"
 
 	"google.golang.org/grpc"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"

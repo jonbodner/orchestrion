@@ -10,9 +10,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/datadog/orchestrion/instrument/event"
-	"github.com/datadog/orchestrion/internal/config"
-	"github.com/datadog/orchestrion/internal/instrument"
+	"github.com/jonbodner/orchestrion/instrument/event"
+	"github.com/jonbodner/orchestrion/internal/config"
+	"github.com/jonbodner/orchestrion/internal/instrument"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )

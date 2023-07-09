@@ -1,4 +1,4 @@
-module github.com/datadog/orchestrion
+module github.com/jonbodner/orchestrion
 
 go 1.19
 

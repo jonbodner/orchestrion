@@ -17,9 +17,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/datadog/orchestrion/instrument/event"
-	"github.com/datadog/orchestrion/internal/config"
-	"github.com/datadog/orchestrion/internal/typechecker"
+	"github.com/jonbodner/orchestrion/instrument/event"
+	"github.com/jonbodner/orchestrion/internal/config"
+	"github.com/jonbodner/orchestrion/internal/typechecker"
 
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -185,7 +185,7 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 			Tok: token.ASSIGN,
 			Rhs: []dst.Expr{
 				&dst.CallExpr{
-					Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+					Fun:  &dst.Ident{Name: "Report", Path: "github.com/jonbodner/orchestrion/instrument"},
 					Args: buildArgs(contextExpr, event.EventStart, name, parts),
 				},
 			},
@@ -197,7 +197,7 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 		},
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{
-				Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+				Fun:  &dst.Ident{Name: "Report", Path: "github.com/jonbodner/orchestrion/instrument"},
 				Args: buildArgs(contextExpr, event.EventEnd, name, parts),
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
@@ -213,7 +213,7 @@ func buildArgs(contextExpr contextInfo, event event.Event, name string, parts []
 	out := make([]dst.Expr, 0, len(parts)*2+4)
 	out = append(out,
 		dupCtxExprForSpan(contextExpr),
-		&dst.Ident{Name: event.String(), Path: "github.com/datadog/orchestrion/instrument/event"},
+		&dst.Ident{Name: event.String(), Path: "github.com/jonbodner/orchestrion/instrument/event"},
 		&dst.BasicLit{Kind: token.STRING, Value: `"function-name"`},
 		&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, name)},
 	)
@@ -456,7 +456,7 @@ func wrapGRPC(stmt *dst.AssignStmt) {
 				stmt.Decorations().End.Append("\n", dd_endwrap)
 				for _, opt := range opts {
 					fun.Args = append(fun.Args,
-						&dst.CallExpr{Fun: &dst.Ident{Name: opt, Path: "github.com/datadog/orchestrion/instrument"}},
+						&dst.CallExpr{Fun: &dst.Ident{Name: opt, Path: "github.com/jonbodner/orchestrion/instrument"}},
 					)
 				}
 			}
@@ -495,7 +495,7 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 					kve.Decorations().Start.Append(dd_startwrap)
 					kve.Decorations().End.Append("\n", dd_endwrap)
 					kve.Value = &dst.CallExpr{
-						Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion/instrument"},
+						Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/jonbodner/orchestrion/instrument"},
 						Args: []dst.Expr{kve.Value},
 					}
 					return true
@@ -522,7 +522,7 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) boo
 	stmt.Decorations().Start.Append(dd_startwrap)
 	stmt.Decorations().End.Append("\n", dd_endwrap)
 	stmt.Rhs[0] = &dst.CallExpr{
-		Fun:  &dst.Ident{Name: "WrapHTTPClient", Path: "github.com/datadog/orchestrion/instrument"},
+		Fun:  &dst.Ident{Name: "WrapHTTPClient", Path: "github.com/jonbodner/orchestrion/instrument"},
 		Args: []dst.Expr{stmt.Rhs[0]},
 	}
 	return true
@@ -582,7 +582,7 @@ func wrapSqlCall(call *dst.CallExpr) bool {
 	if !(ok && f.Path == "database/sql" && (f.Name == "Open" || f.Name == "OpenDB")) {
 		return false
 	}
-	f.Path = "github.com/datadog/orchestrion/instrument"
+	f.Path = "github.com/jonbodner/orchestrion/instrument"
 	return true
 }
 
@@ -617,7 +617,7 @@ func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typechecker.TypeChecker) bool {
 		fun.Decorations().Start.Append(dd_startwrap)
 		fun.Decorations().End.Append("\n", dd_endwrap)
 		fun.Args[1] = &dst.CallExpr{
-			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion/instrument"},
+			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/jonbodner/orchestrion/instrument"},
 			Args: []dst.Expr{fun.Args[1]},
 		}
 		return true
@@ -667,13 +667,13 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 							},
 							Args: []dst.Expr{
 								&dst.CallExpr{
-									Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+									Fun: &dst.Ident{Name: "Report", Path: "github.com/jonbodner/orchestrion/instrument"},
 									Args: []dst.Expr{
 										&dst.CallExpr{Fun: &dst.SelectorExpr{
 											X:   &dst.Ident{Name: requestName},
 											Sel: &dst.Ident{Name: "Context"},
 										}},
-										&dst.Ident{Name: "EventCall", Path: "github.com/datadog/orchestrion/instrument/event"},
+										&dst.Ident{Name: "EventCall", Path: "github.com/jonbodner/orchestrion/instrument/event"},
 										&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 										&dst.SelectorExpr{
 											X:   &dst.Ident{Name: requestName},
@@ -695,19 +695,19 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 					Tok: token.ASSIGN,
 					Rhs: []dst.Expr{
 						&dst.CallExpr{
-							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion/instrument"},
+							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/jonbodner/orchestrion/instrument"},
 							Args: []dst.Expr{&dst.Ident{Name: requestName}},
 						},
 					},
 				},
 				&dst.DeferStmt{Call: &dst.CallExpr{
-					Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+					Fun: &dst.Ident{Name: "Report", Path: "github.com/jonbodner/orchestrion/instrument"},
 					Args: []dst.Expr{
 						&dst.CallExpr{Fun: &dst.SelectorExpr{
 							X:   &dst.Ident{Name: requestName},
 							Sel: &dst.Ident{Name: "Context"},
 						}},
-						&dst.Ident{Name: "EventReturn", Path: "github.com/datadog/orchestrion/instrument/event"},
+						&dst.Ident{Name: "EventReturn", Path: "github.com/jonbodner/orchestrion/instrument/event"},
 						&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 						&dst.SelectorExpr{
 							X:   &dst.Ident{Name: requestName},
@@ -750,7 +750,7 @@ func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{
 				Fun: &dst.CallExpr{
-					Fun: &dst.Ident{Path: "github.com/datadog/orchestrion/instrument", Name: "Init"},
+					Fun: &dst.Ident{Path: "github.com/jonbodner/orchestrion/instrument", Name: "Init"},
 				},
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
@@ -807,13 +807,13 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 					},
 					Args: []dst.Expr{
 						&dst.CallExpr{
-							Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+							Fun: &dst.Ident{Name: "Report", Path: "github.com/jonbodner/orchestrion/instrument"},
 							Args: []dst.Expr{
 								&dst.CallExpr{Fun: &dst.SelectorExpr{
 									X:   &dst.Ident{Name: requestName},
 									Sel: &dst.Ident{Name: "Context"},
 								}},
-								&dst.Ident{Name: "EventStart", Path: "github.com/datadog/orchestrion/instrument/event"},
+								&dst.Ident{Name: "EventStart", Path: "github.com/jonbodner/orchestrion/instrument/event"},
 								&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 								dup(funcName),
 								&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
@@ -834,13 +834,13 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 		},
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{
-				Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+				Fun: &dst.Ident{Name: "Report", Path: "github.com/jonbodner/orchestrion/instrument"},
 				Args: []dst.Expr{
 					&dst.CallExpr{Fun: &dst.SelectorExpr{
 						X:   &dst.Ident{Name: requestName},
 						Sel: &dst.Ident{Name: "Context"},
 					}},
-					&dst.Ident{Name: "EventEnd", Path: "github.com/datadog/orchestrion/instrument/event"},
+					&dst.Ident{Name: "EventEnd", Path: "github.com/jonbodner/orchestrion/instrument/event"},
 					&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 					dup(funcName),
 					&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},

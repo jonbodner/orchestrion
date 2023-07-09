@@ -12,7 +12,7 @@ issue requires debugging or investigation of your specific private setup, that i
 -->
 
 **Version of orchestrion**
-<!-- If you aren't using the [latest version](https://github.com/DataDog/orchestrion/releases) of orchestrion, try upgrading first to see if your issue has already been resolved -->
+<!-- If you aren't using the [latest version](https://github.com/jonbodner/orchestrion/releases) of orchestrion, try upgrading first to see if your issue has already been resolved -->
 
 **Describe what happened:**
 

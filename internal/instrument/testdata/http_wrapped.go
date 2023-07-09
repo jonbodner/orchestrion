@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 func main() {

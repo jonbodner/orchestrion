@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/config"
+	"github.com/jonbodner/orchestrion/internal/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +38,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 var s http.ServeMux
@@ -71,7 +71,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 var s *http.Server
@@ -143,7 +143,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 var s http.ServeMux
@@ -204,7 +204,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 var s http.ServeMux
@@ -271,7 +271,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 var s *http.Server
@@ -332,7 +332,7 @@ func init() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 var c *http.Client
@@ -390,8 +390,8 @@ func MyFunc(somectx context.Context) {%s}
 import (
 	"context"
 
-	"github.com/datadog/orchestrion/instrument"
-	"github.com/datadog/orchestrion/instrument/event"
+	"github.com/jonbodner/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument/event"
 )
 
 //dd:span foo:bar other:tag
@@ -438,7 +438,7 @@ func main() {
 `
 	var want = `package main
 
-import "github.com/datadog/orchestrion/instrument"
+import "github.com/jonbodner/orchestrion/instrument"
 
 func main() {
 	//dd:startinstrument
@@ -497,7 +497,7 @@ func register() {
 `
 	var wantTpl = `package main
 
-import "github.com/datadog/orchestrion/instrument"
+import "github.com/jonbodner/orchestrion/instrument"
 
 func register() {
 	//dd:startwrap
@@ -511,7 +511,7 @@ func register() {
 import (
 	"database/sql"
 
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 )
 
 func register() {
@@ -587,7 +587,7 @@ func init() {
 	var wantTpl = `package main
 
 import (
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 	"google.golang.org/grpc"
 )
 
@@ -641,7 +641,7 @@ func init() {
 	var wantTpl = `package main
 
 import (
-	"github.com/datadog/orchestrion/instrument"
+	"github.com/jonbodner/orchestrion/instrument"
 	"google.golang.org/grpc"
 )
 

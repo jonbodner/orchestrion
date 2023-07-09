@@ -42,7 +42,7 @@ The release process consists of creating a release branch, merging fixes to `mai
    $ git push origin vX.Y.Z-rc.W
    ```
 
-4. Create a [GitHub release](https://github.com/DataDog/orchestrion/releases/new). 
+4. Create a [GitHub release](https://github.com/jonbodner/orchestrion/releases/new). 
     - Choose the version tag `vX.Y.Z`
     - Set the release title to `vX.Y.Z`
     - Click on `Generate release notes` for automatic release notes generation
