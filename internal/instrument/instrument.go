@@ -130,12 +130,24 @@ func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typechecker.T
 		// first see if the 1st parameter of the function is a context. If so, use it
 		firstField := decl.Type.Params.List[0]
 		if tc.OfType(firstField.Type, "context.Context") {
-			ci = contextInfo{contextType: ident, name: firstField.Names[0].Name, path: firstField.Names[0].Path}
+			name := "ctx"
+			path := ""
+			if len(firstField.Names) > 0 {
+				name = firstField.Names[0].Name
+				path = firstField.Names[0].Path
+			}
+			ci = contextInfo{contextType: ident, name: name, path: path}
 		} else {
 			// if not, see if there's an *http.Request parameter. If so, use r.Context()
 			for _, v := range decl.Type.Params.List {
 				if tc.OfType(v.Type, "*net/http.Request") {
-					ci = contextInfo{contextType: call, name: v.Names[0].Name, path: v.Names[0].Path}
+					name := "req"
+					path := ""
+					if len(v.Names) > 0 {
+						name = v.Names[0].Name
+						path = v.Names[0].Path
+					}
+					ci = contextInfo{contextType: call, name: name, path: path}
 					break
 				}
 			}
@@ -373,7 +385,11 @@ func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.S
 		}
 	}
 	// get name of request var
-	requestName := funLit.Type.Params.List[1].Names[0].Name
+	names := funLit.Type.Params.List[1].Names
+	requestName := "req"
+	if len(names) > 0 {
+		requestName = names[0].Name
+	}
 	newLines := buildFunctionInstrumentation(name, requestName)
 	funLit.Body.List = append(newLines, funLit.Body.List...)
 	return funLit.Body.List
@@ -776,7 +792,11 @@ func addCodeToHandler(decl *dst.FuncDecl) *dst.FuncDecl {
 		}
 	}
 	// get name of request var
-	requestName := decl.Type.Params.List[1].Names[0].Name
+	names := decl.Type.Params.List[1].Names
+	requestName := "req"
+	if len(names) > 0 {
+		requestName = names[0].Name
+	}
 	newLines := buildFunctionInstrumentation(
 		&dst.BasicLit{Kind: token.STRING, Value: `"` + decl.Name.Name + `"`},
 		requestName)

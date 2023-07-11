@@ -7,19 +7,8 @@ package instrument
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-
-	"database/sql"
-	"database/sql/driver"
-
 	"github.com/jonbodner/orchestrion/instrument/event"
-
-	"google.golang.org/grpc"
-	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
-	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
-	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	"net/http"
 )
 
 // if a function meets the handlerfunc type, insert code to:
@@ -81,171 +70,43 @@ Will need to properly capture the name of req from the return values of the NewR
 Once we have this working for these simple cases, can work on harder ones!
 */
 
-func InsertHeader(r *http.Request) *http.Request {
-	span, ok := tracer.SpanFromContext(r.Context())
-	if !ok {
-		return r
-	}
-	r = r.Clone(r.Context())
-	tracer.Inject(span.Context(), tracer.HTTPHeadersCarrier(r.Header))
-	return r
+type Instrumenter interface {
+	Init() func()
+	InsertHeader(r *http.Request) *http.Request
+	Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 }
 
-func getOpName(metadata ...any) string {
-	rank := map[string]int{
-		"verb":          1,
-		"function-name": 2,
-	}
+type key string
 
-	var (
-		opname string
-		oprank int = 10_000 // just a higher number than any key in the rank map.
-	)
-	for i := 0; i < len(metadata); i += 2 {
-		if i+1 >= len(metadata) {
-			break
-		}
-		if k, ok := metadata[i].(string); ok {
-			if r, ok := rank[k]; ok && r < oprank {
-				if on, ok := metadata[i+1].(string); ok {
-					opname = on
-					oprank = r
-					continue
-				}
-			}
-		}
+const (
+	DD      key = "dd"
+	Console key = "console"
+)
+
+var (
+	instrumenters = map[key]Instrumenter{
+		DD:      DDInstrumenter{},
+		Console: ConsoleInstrumenter{},
 	}
-	return opname
+)
+
+var instrumenter = instrumenters[DD]
+
+func SetInstrumenter(key key) {
+	instrumenter = instrumenters[key]
+	if instrumenter == nil {
+		panic("unknown key: " + key)
+	}
+}
+
+func InsertHeader(r *http.Request) *http.Request {
+	return instrumenter.InsertHeader(r)
 }
 
 func Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
-	var span tracer.Span
-	if e == event.EventStart || e == event.EventCall {
-		var opts []tracer.StartSpanOption
-		for i := 0; i < len(metadata); i += 2 {
-			if i+1 >= len(metadata) {
-				break
-			}
-			if k, ok := metadata[i].(string); ok {
-				opts = append(opts, tracer.Tag(k, metadata[i+1]))
-			}
-		}
-		span, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
-	} else if e == event.EventEnd || e == event.EventReturn {
-		var ok bool
-		span, ok = tracer.SpanFromContext(ctx)
-		if !ok {
-			fmt.Printf("Error: Received end/return event but have no corresponding span in the context.\n")
-			return ctx
-		}
-		span.Finish()
-	}
-
-	// buildStackTrace := func() []uintptr {
-	// 	pc := make([]uintptr, 2)
-	// 	n := runtime.Callers(3, pc)
-	// 	pc = pc[:n]
-	// 	return pc
-	// }
-
-	// stackTrace := func(trace []uintptr) *runtime.Frames {
-	// 	return runtime.CallersFrames(trace)
-	// }
-
-	// frames := stackTrace(buildStackTrace())
-	// 	frame, _ := frames.Next()
-	// 	file := ""
-	// 	line := 0
-	// 	funcName := ""
-	// 	if frame.Func != nil {
-	// 		file, line = frame.Func.FileLine(frame.PC)
-	// 		funcName = frame.Func.Name()
-	// 	}
-
-	// in case we end up needing to walk further up, here's code to do that
-	//for {
-	//	frame, more := frames.Next()
-	//	if frame.Func != nil {
-	//		file, line := frame.Func.FileLine(frame.PC)
-	//		fmt.Printf("Function %s in file %s on line %d\n", frame.Func.Name(),
-	//			file, line)
-	//	}
-	//	if !more {
-	//		break
-	//	}
-	//}
-
-	// 	var s strings.Builder
-	// 	s.WriteString(fmt.Sprintf(`{"time":"%s", "reportID":"%s", "event":"%s"`,
-	// 		time.Now(), reportID, e))
-	// 	s.WriteString(fmt.Sprintf(`, "function":"%s", "file":"%s", "line":%d`, funcName, file, line))
-	// 	if len(metadata)%2 != 0 {
-	// 		metadata = append(metadata, "")
-	// 	}
-	// 	for i := 0; i < len(metadata); i += 2 {
-	// 		s.WriteString(fmt.Sprintf(`, "%s":"%s"`, metadata[i], metadata[i+1]))
-	// 	}
-	// 	s.WriteString("}")
-	// 	fmt.Println(s.String())
-
-	fmt.Printf("%v: %v\n", e, span)
-	return ctx
-}
-
-func WrapHandler(handler http.Handler) http.Handler {
-	return httptrace.WrapHandler(handler, "", "")
-	// TODO: We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
-	//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//		r = HandleHeader(r)
-	//		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
-	//		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
-	//		handler.ServeHTTP(w, r)
-	//	})
-}
-
-func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		httptrace.TraceAndServe(handlerFunc, w, r, &httptrace.ServeConfig{})
-	})
-	// TODO: We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
-	//	return func(w http.ResponseWriter, r *http.Request) {
-	//		r = HandleHeader(r)
-	//		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
-	//		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
-	//		handlerFunc(w, r)
-	//	}
-}
-
-func WrapHTTPClient(client *http.Client) *http.Client {
-	// TODO: Stop hard-coding dd-trace-go.
-	return httptrace.WrapClient(client)
-}
-
-func GRPCStreamServerInterceptor() grpc.ServerOption {
-	return grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
-}
-
-func GRPCUnaryServerInterceptor() grpc.ServerOption {
-	return grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
-}
-
-func GRPCStreamClientInterceptor() grpc.DialOption {
-	return grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
-}
-
-func GRPCUnaryClientInterceptor() grpc.DialOption {
-	return grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
-}
-
-func Open(driverName, dataSourceName string) (*sql.DB, error) {
-	return sqltrace.Open(driverName, dataSourceName)
-}
-
-func OpenDB(c driver.Connector) *sql.DB {
-	return sqltrace.OpenDB(c)
+	return instrumenter.Report(ctx, e, metadata)
 }
 
 func Init() func() {
-	tracer.Start()
-	return tracer.Stop
+	return instrumenter.Init()
 }
