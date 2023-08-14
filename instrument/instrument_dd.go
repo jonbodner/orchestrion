@@ -21,12 +21,12 @@ import (
 
 type DDInstrumenter struct{}
 
-func (D DDInstrumenter) Init() func() {
+func (_ DDInstrumenter) Init() func() {
 	tracer.Start()
 	return tracer.Stop
 }
 
-func (D DDInstrumenter) InsertHeader(r *http.Request) *http.Request {
+func (_ DDInstrumenter) InsertHeader(r *http.Request) *http.Request {
 	span, ok := tracer.SpanFromContext(r.Context())
 	if !ok {
 		return r
@@ -36,7 +36,7 @@ func (D DDInstrumenter) InsertHeader(r *http.Request) *http.Request {
 	return r
 }
 
-func (D DDInstrumenter) Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
+func (_ DDInstrumenter) Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
 	var span tracer.Span
 	if e == event.EventStart || e == event.EventCall {
 		var opts []tracer.StartSpanOption
@@ -69,7 +69,7 @@ func getOpName(metadata ...any) string {
 
 	var (
 		opname string
-		oprank int = 10_000 // just a higher number than any key in the rank map.
+		oprank = 10_000 // just a higher number than any key in the rank map.
 	)
 	for i := 0; i < len(metadata); i += 2 {
 		if i+1 >= len(metadata) {

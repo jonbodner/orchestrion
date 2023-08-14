@@ -27,9 +27,11 @@ func main() {
 	var write bool
 	var remove bool
 	var httpMode string
+	var target string
 	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
 	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
+	flag.StringVar(&httpMode, "target", "console", "set the target instrumentation type: console (default), dd, or otel")
 	flag.Parse()
 	if len(flag.Args()) == 0 {
 		return
@@ -51,7 +53,7 @@ func main() {
 			}
 		}
 	}
-	conf := config.Config{HTTPMode: httpMode}
+	conf := config.Config{HTTPMode: httpMode, Instrumentation: target}
 	if err := conf.Validate(); err != nil {
 		fmt.Printf("Config error: %v\n", err)
 		os.Exit(1)

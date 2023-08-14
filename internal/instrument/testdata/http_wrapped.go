@@ -19,9 +19,9 @@ import (
 
 func main() {
 	//dd:startinstrument
-	defer instrument.Init()()
+	defer instrument.Init(orchestrionTarget)()
 	//dd:endinstrument
-	s := http.NewServeMux()
+	var s *http.ServeMux = http.NewServeMux()
 	//dd:startwrap
 	s.HandleFunc("/handle", instrument.WrapHandlerFunc(myHandler))
 	//dd:endwrap
@@ -65,3 +65,8 @@ func myClient() {
 	}
 	fmt.Println(string(b))
 }
+
+//dd:startinstrument
+var orchestrionTarget = "console"
+
+//dd:endinstrument

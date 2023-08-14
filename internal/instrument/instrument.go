@@ -73,7 +73,25 @@ func InstrumentFile(name string, content io.Reader, conf config.Config) (io.Read
 	// Use the type checker to extract variable types
 	tc := typechecker.New(dec)
 	tc.Check(name, fset, astFile)
+	hasMain := false
+	hasConstant := false
 	for _, decl := range f.Decls {
+		if decl, ok := decl.(*dst.GenDecl); ok && !hasConstant {
+			if decl.Tok == token.VAR {
+				decs := decl.Decs.Start
+				for _, v := range decs.All() {
+					if strings.HasPrefix(v, dd_startinstrument) {
+						log.Println("already instrumented")
+						hasConstant = true
+						break
+					}
+				}
+				if hasConstant {
+					continue
+				}
+			}
+		}
+
 		if decl, ok := decl.(*dst.FuncDecl); ok {
 			decos := decl.Decorations().Start.All()
 			if hasLabel(dd_ignore, decos) {
@@ -90,17 +108,46 @@ func InstrumentFile(name string, content io.Reader, conf config.Config) (io.Read
 			}
 			// add init to main
 			if decl.Name.Name == "main" {
+				hasMain = true
 				decl = addInit(decl)
 			}
 			// wrap or report clients and handlers
 			decl.Body.List = addInFunctionCode(decl.Body.List, tc, conf)
 		}
 	}
+	if hasMain && !hasConstant {
+		f.Decls = append(f.Decls, addInitVar(conf))
+	}
 
 	res := decorator.NewRestorerWithImports(name, guess.New())
 	var out bytes.Buffer
 	err = res.Fprint(&out, f)
 	return &out, err
+}
+
+func addInitVar(conf config.Config) dst.Decl {
+	return &dst.GenDecl{
+		Tok:    token.VAR,
+		Lparen: false,
+		Specs: []dst.Spec{
+			&dst.ValueSpec{
+				Names: []*dst.Ident{
+					{Name: "orchestrionTarget"},
+				},
+				Values: []dst.Expr{&dst.BasicLit{
+					Kind:  token.STRING,
+					Value: fmt.Sprintf(`"%s"`, conf.Instrumentation),
+				}},
+			},
+		},
+		Rparen: false,
+		Decs: dst.GenDeclDecorations{
+			NodeDecs: dst.NodeDecs{
+				Start: dst.Decorations{"\n", dd_startinstrument},
+				End:   dst.Decorations{"\n", dd_endinstrument},
+			},
+		},
+	}
 }
 
 func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typechecker.TypeChecker) *dst.FuncDecl {
@@ -129,7 +176,7 @@ func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typechecker.T
 	if len(decl.Type.Params.List) > 0 {
 		// first see if the 1st parameter of the function is a context. If so, use it
 		firstField := decl.Type.Params.List[0]
-		if tc.OfType(firstField.Type, "context.Context") {
+		if isType(firstField.Type, "context", "Context") {
 			name := "ctx"
 			path := ""
 			if len(firstField.Names) > 0 {
@@ -280,7 +327,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 		case *dst.AssignStmt:
 			switch conf.HTTPMode {
 			case "wrap":
-				wrapFromAssign(stmt, tc)
+				wrapFromAssign(stmt)
 			case "report":
 				if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
 					stmt.Decorations().Start.Prepend(dd_instrumented)
@@ -311,7 +358,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 		case *dst.ExprStmt:
 			switch conf.HTTPMode {
 			case "wrap":
-				wrapHandlerFromExpr(stmt, tc)
+				wrapHandlerFromExpr(stmt)
 			case "report":
 				reportHandlerFromExpr(stmt, tc, conf)
 			}
@@ -442,8 +489,8 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 	return "", false
 }
 
-func wrapFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bool {
-	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
+func wrapFromAssign(stmt *dst.AssignStmt) bool {
+	return wrapHandlerFromAssign(stmt) || wrapClientFromAssign(stmt)
 
 }
 
@@ -482,7 +529,7 @@ func wrapGRPC(stmt *dst.AssignStmt) {
 	wrap("Dial", "GRPCStreamClientInterceptor", "GRPCUnaryClientInterceptor")
 }
 
-func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bool {
+func wrapHandlerFromAssign(stmt *dst.AssignStmt) bool {
 	/*
 		s = &http.Server{
 			//dd:startwrap
@@ -505,7 +552,7 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 				}
 				if kve, ok := e.(*dst.KeyValueExpr); ok {
 					k, ok := kve.Key.(*dst.Ident)
-					if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
+					if !(ok && k.Name == "Handler") {
 						continue
 					}
 					kve.Decorations().Start.Append(dd_startwrap)
@@ -522,7 +569,7 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 	return false
 }
 
-func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bool {
+func wrapClientFromAssign(stmt *dst.AssignStmt) bool {
 	/*
 		//dd:startwrap
 		c = orchestrion.WrapHTTPClient(client)
@@ -532,7 +579,7 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) boo
 		return false
 	}
 	iden, ok := stmt.Lhs[0].(*dst.Ident)
-	if !(ok && tc.OfType(iden, "*net/http.Client")) {
+	if !(ok && isType(iden, "net/http", "Client")) {
 		return false
 	}
 	stmt.Decorations().Start.Append(dd_startwrap)
@@ -602,7 +649,7 @@ func wrapSqlCall(call *dst.CallExpr) bool {
 	return true
 }
 
-func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typechecker.TypeChecker) bool {
+func wrapHandlerFromExpr(stmt *dst.ExprStmt) bool {
 	/*
 		//dd:startwrap
 		http.Handle("/handle", orchestrion.WrapHandler(handler))
@@ -641,13 +688,48 @@ func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typechecker.TypeChecker) bool {
 	if fun, ok := stmt.X.(*dst.CallExpr); ok && len(fun.Args) == 2 {
 		switch f := fun.Fun.(type) {
 		case *dst.SelectorExpr:
-			if tc.OfType(f.X, "*net/http.ServeMux") || tc.OfType(f.X, "net/http.ServeMux") {
+			if isType(f.X, "net/http", "ServeMux") {
 				return wrap(fun, f.Sel.Name)
 			}
 		case *dst.Ident:
 			if f.Path == "net/http" {
 				return wrap(fun, f.Name)
 			}
+		}
+	}
+	return false
+}
+
+func isType(node dst.Expr, path string, name string) bool {
+	switch node := node.(type) {
+	case *dst.Ident:
+		if node.Obj == nil {
+			return node.Name == name && node.Path == path
+		}
+		if decl, ok := node.Obj.Decl.(*dst.ValueSpec); ok {
+			return isType(decl.Type, path, name)
+		}
+		if decl, ok := node.Obj.Decl.(*dst.AssignStmt); ok {
+			pos := -1
+			for i, v := range decl.Lhs {
+				if vId, ok := v.(*dst.Ident); ok {
+					if vId.Name == node.Name && vId.Path == node.Path {
+						pos = i
+						break
+					}
+				}
+			}
+			if pos == -1 {
+				return false
+			}
+			return isType(decl.Rhs[pos], path, name)
+		}
+
+	case *dst.StarExpr:
+		return isType(node.X, path, name)
+	case *dst.UnaryExpr:
+		if nodeType, ok := node.X.(*dst.CompositeLit); ok {
+			return isType(nodeType.Type, path, name)
 		}
 	}
 	return false
@@ -766,7 +848,8 @@ func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{
 				Fun: &dst.CallExpr{
-					Fun: &dst.Ident{Path: "github.com/jonbodner/orchestrion/instrument", Name: "Init"},
+					Fun:  &dst.Ident{Path: "github.com/jonbodner/orchestrion/instrument", Name: "Init"},
+					Args: []dst.Expr{&dst.Ident{Name: "orchestrionTarget"}},
 				},
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{

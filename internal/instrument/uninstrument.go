@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"go/token"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/jonbodner/orchestrion/internal/config"
@@ -38,6 +39,7 @@ func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, 
 		return nil, fmt.Errorf("error parsing content in %s: %w", name, err)
 	}
 
+	outDecls := make([]dst.Decl, 0, len(f.Decls))
 	for _, decl := range f.Decls {
 		if decl, ok := decl.(*dst.FuncDecl); ok {
 			decl.Body.List = removeStartEndWrap(decl.Body.List)
@@ -73,7 +75,26 @@ func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, 
 				}
 			}
 		}
+		// if this is a decorated constant, don't include it
+		if decl, ok := decl.(*dst.GenDecl); ok {
+			if decl.Tok == token.VAR {
+				decs := decl.Decs.Start
+				found := false
+				for _, v := range decs.All() {
+					if strings.HasPrefix(v, dd_startinstrument) {
+						log.Println("already instrumented")
+						found = true
+						break
+					}
+				}
+				if found {
+					continue
+				}
+			}
+		}
+		outDecls = append(outDecls, decl)
 	}
+	f.Decls = outDecls
 
 	res := decorator.NewRestorerWithImports(name, guess.New())
 	var out bytes.Buffer

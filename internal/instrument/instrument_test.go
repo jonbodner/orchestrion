@@ -252,6 +252,64 @@ func register() {
 	}
 }
 
+func TestWrapHandlerExprPtr(t *testing.T) {
+	var codeTpl = `package main
+
+import "net/http"
+
+var s *http.ServeMux
+
+func register() {
+	%s
+}
+`
+	var wantTpl = `package main
+
+import (
+	"net/http"
+
+	"github.com/jonbodner/orchestrion/instrument"
+)
+
+var s *http.ServeMux
+
+func register() {
+	//dd:startwrap
+	%s
+	//dd:endwrap
+}
+`
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{in: `s.Handle("/handle", handler)`, want: `s.Handle("/handle", instrument.WrapHandler(handler))`},
+		{in: `s.Handle("/handle", http.HandlerFunc(myHandler))`, want: `s.Handle("/handle", instrument.WrapHandler(http.HandlerFunc(myHandler)))`},
+		{in: `s.Handle("/handle", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`, want: `s.Handle("/handle", instrument.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))`},
+		{in: `s.HandleFunc("/handle", handler)`, want: `s.HandleFunc("/handle", instrument.WrapHandlerFunc(handler))`},
+		{in: `s.HandleFunc("/handle", http.HandlerFunc(myHandler))`, want: `s.HandleFunc("/handle", instrument.WrapHandlerFunc(http.HandlerFunc(myHandler)))`},
+		{in: `s.HandleFunc("/handle", func(w http.ResponseWriter, r *http.Request) {})`, want: `s.HandleFunc("/handle", instrument.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(wantTpl, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+}
+
 func TestWrapHandlerAssign(t *testing.T) {
 	var codeTpl = `package main
 
@@ -442,10 +500,15 @@ import "github.com/jonbodner/orchestrion/instrument"
 
 func main() {
 	//dd:startinstrument
-	defer instrument.Init()()
+	defer instrument.Init(orchestrionTarget)()
 	//dd:endinstrument
 	whatever.code
 }
+
+//dd:startinstrument
+var orchestrionTarget = "console"
+
+//dd:endinstrument
 `
 
 	reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
@@ -472,7 +535,7 @@ func TestHTTPModeConfig(t *testing.T) {
 			in, err := os.Open(tc.in)
 			require.NoError(t, err)
 
-			reader, err := InstrumentFile(in.Name(), in, config.Config{HTTPMode: tc.mode})
+			reader, err := InstrumentFile(in.Name(), in, config.Config{HTTPMode: tc.mode, Instrumentation: "console"})
 			require.NoError(t, err)
 
 			got, err := io.ReadAll(reader)

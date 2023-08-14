@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	s := http.NewServeMux()
+	var s *http.ServeMux = http.NewServeMux()
 	s.HandleFunc("/handle", myHandler)
 }
 

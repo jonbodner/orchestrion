@@ -76,15 +76,16 @@ type Instrumenter interface {
 	Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 }
 
-type key string
+type Key string
 
 const (
-	DD      key = "dd"
-	Console key = "console"
+	DD      Key = "dd"
+	Console Key = "console"
+	OTel    Key = "otel"
 )
 
 var (
-	instrumenters = map[key]Instrumenter{
+	instrumenters = map[Key]Instrumenter{
 		DD:      DDInstrumenter{},
 		Console: ConsoleInstrumenter{},
 	}
@@ -92,7 +93,7 @@ var (
 
 var instrumenter = instrumenters[DD]
 
-func SetInstrumenter(key key) {
+func SetInstrumenter(key Key) {
 	instrumenter = instrumenters[key]
 	if instrumenter == nil {
 		panic("unknown key: " + key)
@@ -107,6 +108,7 @@ func Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 	return instrumenter.Report(ctx, e, metadata)
 }
 
-func Init() func() {
+func Init(target string) func() {
+	SetInstrumenter(Key(target))
 	return instrumenter.Init()
 }
