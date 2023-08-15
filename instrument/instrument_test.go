@@ -7,10 +7,10 @@ package instrument
 
 import (
 	"context"
+	"github.com/jonbodner/orchestrion/instrument/event"
 	"io"
 	"testing"
 
-	"github.com/jonbodner/orchestrion/instrument/event"
 	"github.com/jonbodner/orchestrion/internal/config"
 	"github.com/jonbodner/orchestrion/internal/instrument"
 

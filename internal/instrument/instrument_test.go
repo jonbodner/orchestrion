@@ -449,14 +449,13 @@ import (
 	"context"
 
 	"github.com/jonbodner/orchestrion/instrument"
-	"github.com/jonbodner/orchestrion/instrument/event"
 )
 
 //dd:span foo:bar other:tag
 func MyFunc(somectx context.Context) {
 	//dd:startinstrument
-	somectx = instrument.Report(somectx, event.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
-	defer instrument.Report(somectx, event.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	somectx = instrument.Report(somectx, instrument.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	defer instrument.Report(somectx, instrument.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
 	//dd:endinstrument%s
 }
 `

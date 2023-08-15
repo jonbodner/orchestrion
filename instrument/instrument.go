@@ -112,3 +112,12 @@ func Init(target string) func() {
 	SetInstrumenter(Key(target))
 	return instrumenter.Init()
 }
+
+const (
+	EventStart    = event.EventStart
+	EventEnd      = event.EventEnd
+	EventCall     = event.EventCall
+	EventReturn   = event.EventReturn
+	EventDBCall   = event.EventDBCall
+	EventDBReturn = event.EventDBReturn
+)

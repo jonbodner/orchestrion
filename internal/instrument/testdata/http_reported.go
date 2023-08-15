@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/jonbodner/orchestrion/instrument"
-	"github.com/jonbodner/orchestrion/instrument/event"
 )
 
 func main() {
@@ -28,8 +27,8 @@ func main() {
 
 func myHandler(w http.ResponseWriter, r *http.Request) {
 	//dd:startinstrument
-	r = r.WithContext(instrument.Report(r.Context(), event.EventStart, "name", "myHandler", "verb", r.Method))
-	defer instrument.Report(r.Context(), event.EventEnd, "name", "myHandler", "verb", r.Method)
+	r = r.WithContext(instrument.Report(r.Context(), instrument.EventStart, "name", "myHandler", "verb", r.Method))
+	defer instrument.Report(r.Context(), instrument.EventEnd, "name", "myHandler", "verb", r.Method)
 	//dd:endinstrument
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -52,9 +51,9 @@ func myClient() {
 		strings.NewReader(os.Args[1]))
 	//dd:startinstrument
 	if req != nil {
-		req = req.WithContext(instrument.Report(req.Context(), event.EventCall, "name", req.URL, "verb", req.Method))
+		req = req.WithContext(instrument.Report(req.Context(), instrument.EventCall, "name", req.URL, "verb", req.Method))
 		req = instrument.InsertHeader(req)
-		defer instrument.Report(req.Context(), event.EventReturn, "name", req.URL, "verb", req.Method)
+		defer instrument.Report(req.Context(), instrument.EventReturn, "name", req.URL, "verb", req.Method)
 	}
 	//dd:endinstrument
 	if err != nil {

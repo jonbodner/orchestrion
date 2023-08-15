@@ -38,7 +38,7 @@ func (_ DDInstrumenter) InsertHeader(r *http.Request) *http.Request {
 
 func (_ DDInstrumenter) Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
 	var span tracer.Span
-	if e == event.EventStart || e == event.EventCall {
+	if e == EventStart || e == EventCall {
 		var opts []tracer.StartSpanOption
 		for i := 0; i < len(metadata); i += 2 {
 			if i+1 >= len(metadata) {

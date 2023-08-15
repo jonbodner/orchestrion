@@ -272,7 +272,7 @@ func buildArgs(contextExpr contextInfo, event event.Event, name string, parts []
 	out := make([]dst.Expr, 0, len(parts)*2+4)
 	out = append(out,
 		dupCtxExprForSpan(contextExpr),
-		&dst.Ident{Name: event.String(), Path: "github.com/jonbodner/orchestrion/instrument/event"},
+		&dst.Ident{Name: event.String(), Path: "github.com/jonbodner/orchestrion/instrument"},
 		&dst.BasicLit{Kind: token.STRING, Value: `"function-name"`},
 		&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, name)},
 	)
@@ -771,7 +771,7 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 											X:   &dst.Ident{Name: requestName},
 											Sel: &dst.Ident{Name: "Context"},
 										}},
-										&dst.Ident{Name: "EventCall", Path: "github.com/jonbodner/orchestrion/instrument/event"},
+										&dst.Ident{Name: "EventCall", Path: "github.com/jonbodner/orchestrion/instrument"},
 										&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 										&dst.SelectorExpr{
 											X:   &dst.Ident{Name: requestName},
@@ -805,7 +805,7 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 							X:   &dst.Ident{Name: requestName},
 							Sel: &dst.Ident{Name: "Context"},
 						}},
-						&dst.Ident{Name: "EventReturn", Path: "github.com/jonbodner/orchestrion/instrument/event"},
+						&dst.Ident{Name: "EventReturn", Path: "github.com/jonbodner/orchestrion/instrument"},
 						&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 						&dst.SelectorExpr{
 							X:   &dst.Ident{Name: requestName},
@@ -916,7 +916,7 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 									X:   &dst.Ident{Name: requestName},
 									Sel: &dst.Ident{Name: "Context"},
 								}},
-								&dst.Ident{Name: "EventStart", Path: "github.com/jonbodner/orchestrion/instrument/event"},
+								&dst.Ident{Name: "EventStart", Path: "github.com/jonbodner/orchestrion/instrument"},
 								&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 								dup(funcName),
 								&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
@@ -943,7 +943,7 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 						X:   &dst.Ident{Name: requestName},
 						Sel: &dst.Ident{Name: "Context"},
 					}},
-					&dst.Ident{Name: "EventEnd", Path: "github.com/jonbodner/orchestrion/instrument/event"},
+					&dst.Ident{Name: "EventEnd", Path: "github.com/jonbodner/orchestrion/instrument"},
 					&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 					dup(funcName),
 					&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
