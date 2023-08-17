@@ -141,7 +141,7 @@ func (c ConsoleInstrumenter) InsertHeader(r *http.Request) *http.Request {
 func (c ConsoleInstrumenter) Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
 	ctx, traceID, parentSpanID, spanID := getOrBuildIDs(ctx)
 	// print out the values
-	fmt.Fprintf(os.Stderr, "%s: %s report trace_id=%q, parent_span_id=%q, span_id=%q", time.Now().UTC().Format(time.RFC3339Nano), event.EventStart, traceID, parentSpanID, spanID)
+	fmt.Fprintf(os.Stderr, "%s: %s report trace_id=%q, parent_span_id=%q, span_id=%q", time.Now().UTC().Format(time.RFC3339Nano), e, traceID, parentSpanID, spanID)
 	for i := 0; i < len(metadata); i += 2 {
 		fmt.Fprintf(os.Stderr, " %v=%v", metadata[i], metadata[i+1])
 	}
