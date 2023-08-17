@@ -51,14 +51,11 @@ func (c ConsoleInstrumenter) WrapHandler(handler http.Handler) http.Handler {
 		traceID := r.Header.Get(traceHeader)
 		parentSpanID := r.Header.Get(parentSpanHeader)
 
-		// if not there, create them both
+		// if not there, create traceID
 		if traceID == "" {
 			traceID = makeID()
 		}
 
-		if parentSpanID == "" {
-			parentSpanID = makeID()
-		}
 		// make span id
 		spanID := makeID()
 		// put trace id, parent span id, span id in context
@@ -102,7 +99,7 @@ func getOrBuildIDs(ctx context.Context) (context.Context, string, string, string
 		ctx = context.WithValue(ctx, traceIDField, traceID)
 	}
 	// the current span id becomes the parent span id
-	parentSpanID, ok := getFieldFromContext(ctx, spanIDField)
+	parentSpanID, _ := getFieldFromContext(ctx, spanIDField)
 	// if not there, do nothing
 	// add it
 	ctx = context.WithValue(ctx, parentSpanIDField, parentSpanID)
@@ -115,6 +112,10 @@ func getOrBuildIDs(ctx context.Context) (context.Context, string, string, string
 }
 
 func (c ConsoleInstrumenter) WrapHTTPClient(client *http.Client) *http.Client {
+	if client.Transport == nil {
+		client.Transport = http.DefaultTransport
+	}
+
 	return &http.Client{
 		Transport:     &ConsoleRoundTripper{client.Transport},
 		CheckRedirect: client.CheckRedirect,
