@@ -107,7 +107,7 @@ func InsertHeader(r *http.Request) *http.Request {
 }
 
 func Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
-	return instrumenter.Report(ctx, e, metadata)
+	return instrumenter.Report(ctx, e, metadata...)
 }
 
 func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
