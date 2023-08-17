@@ -7,7 +7,13 @@ package instrument
 
 import (
 	"context"
+	"database/sql"
+	"database/sql/driver"
 	"github.com/jonbodner/orchestrion/instrument/event"
+	"github.com/jonbodner/orchestrion/internal/support"
+	"google.golang.org/grpc"
+	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	"net/http"
 )
 
@@ -88,9 +94,9 @@ const (
 )
 
 var instrumenters = map[Key]Instrumenter{
-	DD:      DDInstrumenter{},
-	Console: ConsoleInstrumenter{},
-	OTel:    OTelInstrumenter{},
+	DD:      support.DDInstrumenter{},
+	Console: support.ConsoleInstrumenter{},
+	OTel:    &support.OTelInstrumenter{},
 }
 
 var instrumenter = instrumenters[DD]
@@ -135,3 +141,28 @@ const (
 	EventDBCall   = event.EventDBCall
 	EventDBReturn = event.EventDBReturn
 )
+
+// functions for GRPC and DB support -- not in demo!
+func GRPCStreamServerInterceptor() grpc.ServerOption {
+	return grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
+}
+
+func GRPCUnaryServerInterceptor() grpc.ServerOption {
+	return grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
+}
+
+func GRPCStreamClientInterceptor() grpc.DialOption {
+	return grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
+}
+
+func GRPCUnaryClientInterceptor() grpc.DialOption {
+	return grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
+}
+
+func Open(driverName, dataSourceName string) (*sql.DB, error) {
+	return sqltrace.Open(driverName, dataSourceName)
+}
+
+func OpenDB(c driver.Connector) *sql.DB {
+	return sqltrace.OpenDB(c)
+}

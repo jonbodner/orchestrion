@@ -3,17 +3,12 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package instrument
+package support
 
 import (
 	"context"
-	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"github.com/jonbodner/orchestrion/instrument/event"
-	"google.golang.org/grpc"
-	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
-	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"net/http"
@@ -52,7 +47,7 @@ func (_ DDInstrumenter) InsertHeader(r *http.Request) *http.Request {
 
 func (_ DDInstrumenter) Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
 	var span tracer.Span
-	if e == EventStart || e == EventCall {
+	if e == event.EventStart || e == event.EventCall {
 		var opts []tracer.StartSpanOption
 		for i := 0; i < len(metadata); i += 2 {
 			if i+1 >= len(metadata) {
@@ -100,28 +95,4 @@ func getOpName(metadata ...any) string {
 		}
 	}
 	return opname
-}
-
-func GRPCStreamServerInterceptor() grpc.ServerOption {
-	return grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
-}
-
-func GRPCUnaryServerInterceptor() grpc.ServerOption {
-	return grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
-}
-
-func GRPCStreamClientInterceptor() grpc.DialOption {
-	return grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
-}
-
-func GRPCUnaryClientInterceptor() grpc.DialOption {
-	return grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
-}
-
-func Open(driverName, dataSourceName string) (*sql.DB, error) {
-	return sqltrace.Open(driverName, dataSourceName)
-}
-
-func OpenDB(c driver.Connector) *sql.DB {
-	return sqltrace.OpenDB(c)
 }

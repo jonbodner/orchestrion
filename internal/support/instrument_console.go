@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package instrument
+package support
 
 import (
 	"context"
@@ -81,7 +81,7 @@ func (c *ConsoleRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 	traceID := getFieldFromContext(ctx, traceIDField)
 	parentSpanID := getFieldFromContext(ctx, parentSpanIDField)
 	spanID := getFieldFromContext(ctx, spanIDField)
-	r = r.WithContext(ctx)
+	r = r.Clone(ctx)
 	r.Header.Add(traceHeader, traceID)
 	// current span becomes the parent
 	r.Header.Add(parentSpanHeader, spanID)
@@ -141,7 +141,7 @@ func (c ConsoleInstrumenter) InsertHeader(r *http.Request) *http.Request {
 }
 
 func (c ConsoleInstrumenter) Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
-	if e == EventStart {
+	if e == event.EventStart {
 		ctx = getOrBuildIDs(ctx)
 	}
 	traceID := getFieldFromContext(ctx, traceIDField)
