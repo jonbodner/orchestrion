@@ -9,6 +9,7 @@ import (
 	"context"
 	"github.com/jonbodner/orchestrion/instrument/event"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -54,6 +55,8 @@ func (o *OTelInstrumenter) Init() func() {
 	// Register our TracerProvider as the global so any imported
 	// instrumentation in the future will default to using it.
 	otel.SetTracerProvider(tp)
+
+	otel.SetTextMapPropagator(autoprop.NewTextMapPropagator())
 
 	o.Tracer = otel.Tracer("")
 	return func() {
