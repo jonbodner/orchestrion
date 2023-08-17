@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"log"
 	"net/http"
+	"os"
 )
 
 type OTelInstrumenter struct {
@@ -54,7 +55,7 @@ func (o *OTelInstrumenter) Init() func() {
 	// instrumentation in the future will default to using it.
 	otel.SetTracerProvider(tp)
 
-	o.Tracer = otel.Tracer("demo")
+	o.Tracer = otel.Tracer("")
 	return func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
 			log.Fatal(err)
@@ -78,7 +79,7 @@ func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
 		// Record information about this application in a Resource.
 		tracesdk.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceName("demo"),
+			semconv.ServiceName(os.Args[0]),
 			attribute.String("environment", "demo"),
 			attribute.Int64("ID", 1),
 		)),
