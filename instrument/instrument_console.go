@@ -30,9 +30,9 @@ func addFieldToContext(ctx context.Context, f field, v string) context.Context {
 	return context.WithValue(ctx, f, v)
 }
 
-func getFieldFromContext(ctx context.Context, f field) (string, bool) {
-	val, ok := ctx.Value(f).(string)
-	return val, ok
+func getFieldFromContext(ctx context.Context, f field) string {
+	val, _ := ctx.Value(f).(string)
+	return val
 }
 
 const (
@@ -77,8 +77,10 @@ type ConsoleRoundTripper struct {
 }
 
 func (c *ConsoleRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	ctx := r.Context()
-	ctx, traceID, parentSpanID, spanID := getOrBuildIDs(ctx)
+	ctx := getOrBuildIDs(r.Context())
+	traceID := getFieldFromContext(ctx, traceIDField)
+	parentSpanID := getFieldFromContext(ctx, parentSpanIDField)
+	spanID := getFieldFromContext(ctx, spanIDField)
 	r = r.WithContext(ctx)
 	r.Header.Add(traceHeader, traceID)
 	// current span becomes the parent
@@ -90,16 +92,16 @@ func (c *ConsoleRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 	return c.internalRoundTripper.RoundTrip(r)
 }
 
-func getOrBuildIDs(ctx context.Context) (context.Context, string, string, string) {
+func getOrBuildIDs(ctx context.Context) context.Context {
 	// pull ids from context
-	traceID, ok := getFieldFromContext(ctx, traceIDField)
+	traceID := getFieldFromContext(ctx, traceIDField)
 	// if not there, create and add
-	if !ok {
+	if traceID == "" {
 		traceID = makeID()
 		ctx = context.WithValue(ctx, traceIDField, traceID)
 	}
 	// the current span id becomes the parent span id
-	parentSpanID, _ := getFieldFromContext(ctx, spanIDField)
+	parentSpanID := getFieldFromContext(ctx, spanIDField)
 	// if not there, do nothing
 	// add it
 	ctx = context.WithValue(ctx, parentSpanIDField, parentSpanID)
@@ -108,7 +110,7 @@ func getOrBuildIDs(ctx context.Context) (context.Context, string, string, string
 	spanID := makeID()
 	ctx = context.WithValue(ctx, spanIDField, spanID)
 
-	return ctx, traceID, parentSpanID, spanID
+	return ctx
 }
 
 func (c ConsoleInstrumenter) WrapHTTPClient(client *http.Client) *http.Client {
@@ -139,7 +141,12 @@ func (c ConsoleInstrumenter) InsertHeader(r *http.Request) *http.Request {
 }
 
 func (c ConsoleInstrumenter) Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
-	ctx, traceID, parentSpanID, spanID := getOrBuildIDs(ctx)
+	if e == EventStart {
+		ctx = getOrBuildIDs(ctx)
+	}
+	traceID := getFieldFromContext(ctx, traceIDField)
+	parentSpanID := getFieldFromContext(ctx, parentSpanIDField)
+	spanID := getFieldFromContext(ctx, spanIDField)
 	// print out the values
 	fmt.Fprintf(os.Stderr, "%s: %s report trace_id=%q, parent_span_id=%q, span_id=%q", time.Now().UTC().Format(time.RFC3339Nano), e, traceID, parentSpanID, spanID)
 	for i := 0; i < len(metadata); i += 2 {
