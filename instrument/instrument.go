@@ -74,6 +74,9 @@ type Instrumenter interface {
 	Init() func()
 	InsertHeader(r *http.Request) *http.Request
 	Report(ctx context.Context, e event.Event, metadata ...any) context.Context
+	WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc
+	WrapHTTPClient(client *http.Client) *http.Client
+	WrapHandler(handler http.Handler) http.Handler
 }
 
 type Key string
@@ -84,12 +87,11 @@ const (
 	OTel    Key = "otel"
 )
 
-var (
-	instrumenters = map[Key]Instrumenter{
-		DD:      DDInstrumenter{},
-		Console: ConsoleInstrumenter{},
-	}
-)
+var instrumenters = map[Key]Instrumenter{
+	DD:      DDInstrumenter{},
+	Console: ConsoleInstrumenter{},
+	OTel:    OTelInstrumenter{},
+}
 
 var instrumenter = instrumenters[DD]
 
@@ -106,6 +108,18 @@ func InsertHeader(r *http.Request) *http.Request {
 
 func Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
 	return instrumenter.Report(ctx, e, metadata)
+}
+
+func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return instrumenter.WrapHandlerFunc(handlerFunc)
+}
+
+func WrapHandler(handler http.Handler) http.Handler {
+	return instrumenter.WrapHandler(handler)
+}
+
+func WrapHTTPClient(client *http.Client) *http.Client {
+	return instrumenter.WrapHTTPClient(client)
 }
 
 func Init(target string) func() {
