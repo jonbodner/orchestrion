@@ -34,8 +34,8 @@ Orchestrion also supports automatic tracing of the following libraries:
 - [x] `net/http`
 - [x] `database/sql`
 - [x] `google.golang.org/grpc`
+- [x] Support compile-time auto-instrumentation via `-toolexec`
 
 ## Next steps
 
-- [ ] Support compile-time auto-instrumentation via `-toolexec`
 - [ ] Support auto-instrumenting more third-party libraries
