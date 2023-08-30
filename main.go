@@ -99,11 +99,18 @@ func runToolexecMode(path string, conf config.Config, output func(fullName strin
 	} else {
 		fmt.Println(os.Args)
 		if toolName == "compile" {
+			tmpDir, err := os.MkdirTemp("", "orchestrion")
+			if err != nil {
+				return err
+			}
+			defer os.RemoveAll(tmpDir)
+			newArgs := make([]string, 0, len(args))
 			for _, v := range args {
 				if strings.HasPrefix(v, path) && strings.HasSuffix(v, ".go") {
 					fmt.Println("modifying:", v)
 
 					otherPath, err := filepath.Abs(v)
+
 					if err != nil {
 						return fmt.Errorf("Sanitizing path (%s) failed: %v\n", v, err)
 					}
@@ -116,11 +123,16 @@ func runToolexecMode(path string, conf config.Config, output func(fullName strin
 					if err != nil {
 						return fmt.Errorf("error scanning file %s: %w", path, err)
 					}
+					newFileName := tmpDir + string(os.PathSeparator) + filepath.Base(otherPath)
 					if out != nil {
-						output(v, out)
+						output(newFileName, out)
 					}
+					newArgs = append(newArgs, newFileName)
+				} else {
+					newArgs = append(newArgs, v)
 				}
 			}
+			args = newArgs
 		}
 	}
 	// Simply run the tool.
