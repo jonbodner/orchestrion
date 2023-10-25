@@ -11,7 +11,7 @@ require (
 	go.opentelemetry.io/otel/exporters/jaeger v1.16.0
 	go.opentelemetry.io/otel/sdk v1.16.0
 	go.opentelemetry.io/otel/trace v1.16.0
-	google.golang.org/grpc v1.54.0
+	google.golang.org/grpc v1.56.3
 	gopkg.in/DataDog/dd-trace-go.v1 v1.52.0
 )
 
